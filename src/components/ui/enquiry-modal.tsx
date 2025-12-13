@@ -1,25 +1,27 @@
 import { useState } from "react";
-import { X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EnquiryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   productName?: string;
   productSku?: string;
+  productId?: string;
 }
 
-export function EnquiryModal({ open, onOpenChange, productName, productSku }: EnquiryModalProps) {
+export function EnquiryModal({ open, onOpenChange, productName, productSku, productId }: EnquiryModalProps) {
   const [formData, setFormData] = useState({
     name: "",
+    email: "",
+    phone: "",
     country: "",
-    contactMethod: "",
-    contactDetail: "",
+    contactMethod: "email",
     message: "",
     budgetRange: "",
   });
@@ -29,24 +31,47 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku }: En
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const { error } = await supabase.from("enquiries").insert([
+        {
+          name: formData.name,
+          email: formData.email || null,
+          phone: formData.phone || null,
+          country: formData.country,
+          preferred_contact: formData.contactMethod,
+          message: formData.message,
+          budget_range: formData.budgetRange || null,
+          product_id: productId || null,
+          product_title: productName || null,
+        },
+      ]);
 
-    toast({
-      title: "Thank you for your enquiry!",
-      description: `Thanks, ${formData.name}. We received your enquiry${productName ? ` for ${productName}` : ""}. Expect a reply within 24 hours IST.`,
-    });
+      if (error) throw error;
 
-    setIsSubmitting(false);
-    onOpenChange(false);
-    setFormData({
-      name: "",
-      country: "",
-      contactMethod: "",
-      contactDetail: "",
-      message: "",
-      budgetRange: "",
-    });
+      toast({
+        title: "Thank you for your enquiry!",
+        description: `Thanks, ${formData.name}. We received your enquiry${productName ? ` for ${productName}` : ""}. Expect a reply within 24 hours IST.`,
+      });
+
+      onOpenChange(false);
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        country: "",
+        contactMethod: "email",
+        message: "",
+        budgetRange: "",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error submitting enquiry",
+        description: error.message || "Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -80,13 +105,25 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku }: En
 
           <div>
             <label className="block text-sm font-body text-foreground mb-2">
-              Country *
+              Email
             </label>
             <Input
-              required
-              value={formData.country}
-              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-              placeholder="Your country"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="your@email.com"
+              className="border-border focus:border-gold focus:ring-gold/30"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-body text-foreground mb-2">
+              Phone / WhatsApp
+            </label>
+            <Input
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              placeholder="+91 98765 43210"
               className="border-border focus:border-gold focus:ring-gold/30"
             />
           </div>
@@ -94,7 +131,20 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku }: En
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-body text-foreground mb-2">
-                Preferred Contact *
+                Country *
+              </label>
+              <Input
+                required
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                placeholder="Your country"
+                className="border-border focus:border-gold focus:ring-gold/30"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-body text-foreground mb-2">
+                Preferred Contact
               </label>
               <Select
                 value={formData.contactMethod}
@@ -109,19 +159,6 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku }: En
                   <SelectItem value="email">Email</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-body text-foreground mb-2">
-                Contact Detail *
-              </label>
-              <Input
-                required
-                value={formData.contactDetail}
-                onChange={(e) => setFormData({ ...formData, contactDetail: e.target.value })}
-                placeholder="Number or email"
-                className="border-border focus:border-gold focus:ring-gold/30"
-              />
             </div>
           </div>
 
