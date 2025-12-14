@@ -131,11 +131,19 @@ const ContactPage = () => {
                 </div>
               </div>
               
-              {/* Map Placeholder */}
-              <div className="bg-muted h-64 ornate-frame flex items-center justify-center">
-                <span className="text-muted-foreground font-body italic">
-                  Google Maps Embed
-                </span>
+              {/* Google Maps Embed */}
+              <div className="ornate-frame overflow-hidden">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3929.466!2d76.2595!3d9.9575!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3b0873f1ebcb8a8d%3A0x4f5c8f5f5f5f5f5f!2sJew%20Town%2C%20Mattancherry%2C%20Kochi%2C%20Kerala%20682002!5e0!3m2!1sen!2sin!4v1702500000000!5m2!1sen!2sin"
+                  width="100%"
+                  height="300"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="New Indian Emporium Location - Jew Town, Mattancherry, Kochi"
+                  className="w-full"
+                />
               </div>
             </div>
             
