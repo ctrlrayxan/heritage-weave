@@ -81,9 +81,9 @@ const ContactPage = () => {
                   <div>
                     <h3 className="font-display text-lg text-foreground mb-1">Address</h3>
                     <p className="text-muted-foreground font-body">
-                      Jew Town,<br />
-                      God's Own Country,<br />
-                      Kerala, India
+                      VI/147, Opp. Ginger Restaurant,<br />
+                      Jew Town, Mattancherry,<br />
+                      Kochi - 682 002, Kerala, India
                     </p>
                   </div>
                 </div>
@@ -107,8 +107,8 @@ const ContactPage = () => {
                   </div>
                   <div>
                     <h3 className="font-display text-lg text-foreground mb-1">Email</h3>
-                    <a href="mailto:enquiry@newindianemporium.com" className="text-gold hover:underline font-body">
-                      enquiry@newindianemporium.com
+                    <a href="mailto:syedafroser@rediffmail.com" className="text-gold hover:underline font-body">
+                      syedafroser@rediffmail.com
                     </a>
                   </div>
                 </div>
@@ -118,14 +118,14 @@ const ContactPage = () => {
                     <Phone className="w-5 h-5 text-gold" />
                   </div>
                   <div>
-                    <h3 className="font-display text-lg text-foreground mb-1">WhatsApp</h3>
+                    <h3 className="font-display text-lg text-foreground mb-1">Phone / WhatsApp</h3>
                     <a 
-                      href="https://wa.me/919876543210" 
+                      href="https://wa.me/919884187864" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-gold hover:underline font-body"
                     >
-                      Chat with us on WhatsApp
+                      +91 98841 87864
                     </a>
                   </div>
                 </div>
