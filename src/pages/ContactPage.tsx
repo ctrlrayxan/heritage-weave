@@ -93,10 +93,13 @@ const ContactPage = () => {
                     <Clock className="w-5 h-5 text-gold" />
                   </div>
                   <div>
-                    <h3 className="font-display text-lg text-foreground mb-1">Hours</h3>
+                    <h3 className="font-display text-lg text-foreground mb-1">Store Hours</h3>
                     <p className="text-muted-foreground font-body">
-                      Monday - Saturday<br />
-                      10:00 AM - 6:00 PM IST
+                      Open Daily<br />
+                      10:00 AM - 8:00 PM IST
+                    </p>
+                    <p className="text-sm text-gold font-body mt-1">
+                      Proprietor: Syed Afrose R
                     </p>
                   </div>
                 </div>
