@@ -67,22 +67,22 @@ export function Footer() {
                 <li className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 text-gold mt-1 flex-shrink-0" />
                   <span className="text-primary-foreground/80">
-                    Jew Town,<br />
-                    God's Own Country,<br />
-                    Kerala, India
+                    VI/147, Opp. Ginger Restaurant,<br />
+                    Jew Town, Mattancherry,<br />
+                    Kochi - 682 002, Kerala, India
                   </span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail className="w-5 h-5 text-gold flex-shrink-0" />
-                  <a href="mailto:enquiry@newindianemporium.com" className="text-primary-foreground/80 hover:text-gold transition-colors">
-                    enquiry@newindianemporium.com
+                  <a href="mailto:syedafroser@rediffmail.com" className="text-primary-foreground/80 hover:text-gold transition-colors">
+                    syedafroser@rediffmail.com
                   </a>
                 </li>
                 <li className="flex items-center gap-3">
                   <Phone className="w-5 h-5 text-gold flex-shrink-0" />
-                  <span className="text-primary-foreground/80">
-                    Contact via WhatsApp
-                  </span>
+                  <a href="tel:+919884187864" className="text-primary-foreground/80 hover:text-gold transition-colors">
+                    +91 98841 87864
+                  </a>
                 </li>
               </ul>
             </div>

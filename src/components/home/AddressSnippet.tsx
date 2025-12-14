@@ -23,10 +23,10 @@ export function AddressSnippet() {
         </h2>
         
         <p className="text-xl font-body text-primary-foreground/90 mb-2">
-          Jew Town, God's Own Country
+          VI/147, Opp. Ginger Restaurant, Jew Town, Mattancherry
         </p>
         <p className="text-lg font-body text-gold italic mb-8">
-          Kerala, India
+          Kochi - 682 002, Kerala, India
         </p>
         
         <Link
