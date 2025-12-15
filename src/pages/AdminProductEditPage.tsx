@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Save, Info } from "lucide-react";
+import { ArrowLeft, Save, Upload, X, Star } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const CARE_SUGGESTIONS = {
@@ -18,6 +18,14 @@ const CARE_SUGGESTIONS = {
 
 type ProductCategory = "jewellery" | "pashmina" | "pashtush" | "antiques";
 
+type ProductImage = {
+  id: string;
+  image_url: string;
+  alt_text: string | null;
+  is_hero: boolean;
+  display_order: number;
+};
+
 export default function AdminProductEditPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -25,6 +33,8 @@ export default function AdminProductEditPage() {
 
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     sku: "",
@@ -47,6 +57,7 @@ export default function AdminProductEditPage() {
     checkAuth();
     if (!isNew) {
       fetchProduct();
+      fetchProductImages();
     }
   }, [id]);
 
@@ -89,6 +100,106 @@ export default function AdminProductEditPage() {
     setIsLoading(false);
   };
 
+  const fetchProductImages = async () => {
+    const { data, error } = await supabase
+      .from("product_images")
+      .select("*")
+      .eq("product_id", id)
+      .order("display_order", { ascending: true });
+
+    if (!error && data) {
+      setProductImages(data);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (isNew) {
+      toast({ title: "Please save the product first before uploading images", variant: "destructive" });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from("product-images")
+          .getPublicUrl(fileName);
+
+        const { error: insertError } = await supabase
+          .from("product_images")
+          .insert({
+            product_id: id,
+            image_url: publicUrl,
+            alt_text: formData.title,
+            is_hero: productImages.length === 0,
+            display_order: productImages.length,
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      toast({ title: "Images uploaded successfully!" });
+      fetchProductImages();
+    } catch (error: any) {
+      toast({ title: "Error uploading images", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const deleteImage = async (imageId: string, imageUrl: string) => {
+    if (!confirm("Delete this image?")) return;
+
+    try {
+      // Extract file path from URL
+      const urlParts = imageUrl.split('/product-images/');
+      if (urlParts.length > 1) {
+        const filePath = urlParts[1];
+        await supabase.storage.from("product-images").remove([filePath]);
+      }
+
+      await supabase.from("product_images").delete().eq("id", imageId);
+      toast({ title: "Image deleted" });
+      fetchProductImages();
+    } catch (error: any) {
+      toast({ title: "Error deleting image", variant: "destructive" });
+    }
+  };
+
+  const setHeroImage = async (imageId: string) => {
+    try {
+      // Remove hero status from all images
+      await supabase
+        .from("product_images")
+        .update({ is_hero: false })
+        .eq("product_id", id);
+
+      // Set new hero image
+      await supabase
+        .from("product_images")
+        .update({ is_hero: true })
+        .eq("id", imageId);
+
+      toast({ title: "Hero image updated" });
+      fetchProductImages();
+    } catch (error: any) {
+      toast({ title: "Error updating hero image", variant: "destructive" });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -106,15 +217,15 @@ export default function AdminProductEditPage() {
       };
       
       if (isNew) {
-        const { error } = await supabase.from("products").insert([submitData]);
+        const { data, error } = await supabase.from("products").insert([submitData]).select().single();
         if (error) throw error;
-        toast({ title: "Product created successfully!" });
+        toast({ title: "Product created! You can now upload images." });
+        navigate(`/admin/products/${data.id}`);
       } else {
         const { error } = await supabase.from("products").update(submitData).eq("id", id);
         if (error) throw error;
         toast({ title: "Product updated successfully!" });
       }
-      navigate("/admin/products");
     } catch (error: any) {
       toast({ title: "Error saving product", description: error.message, variant: "destructive" });
     } finally {
@@ -155,21 +266,71 @@ export default function AdminProductEditPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Image Guidelines */}
-        <div className="bg-muted/30 border border-gold/20 rounded-lg p-4 mb-6">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-gold mt-0.5" />
-            <div className="text-sm">
-              <p className="font-body text-foreground font-medium">Image Upload Guidelines</p>
-              <ul className="text-muted-foreground mt-1 space-y-1">
-                <li>• Hero images: 2000px on longest side (JPEG/PNG, sRGB)</li>
-                <li>• Thumbnails: 800px, Close-ups: 1200px</li>
-                <li>• Filename format: sku_shortname_angle.jpg (e.g., JN-001_maharani_side.jpg)</li>
-                <li>• Max file size: 10MB</li>
-              </ul>
-            </div>
+        {/* Image Upload Section */}
+        {!isNew && (
+          <div className="bg-card border border-gold/20 rounded-lg p-6 mb-6">
+            <h2 className="font-display text-lg text-foreground border-b border-border pb-2 mb-4">
+              Product Images
+            </h2>
+            
+            {/* Current Images */}
+            {productImages.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                {productImages.map((image) => (
+                  <div key={image.id} className="relative group">
+                    <img
+                      src={image.image_url}
+                      alt={image.alt_text || "Product image"}
+                      className="w-full aspect-square object-cover rounded-lg border border-border"
+                    />
+                    {image.is_hero && (
+                      <div className="absolute top-2 left-2 bg-gold text-secondary-foreground text-xs px-2 py-0.5 rounded">
+                        Hero
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!image.is_hero && (
+                        <button
+                          onClick={() => setHeroImage(image.id)}
+                          className="p-1.5 bg-background/90 rounded-full hover:bg-gold hover:text-secondary-foreground transition-colors"
+                          title="Set as hero image"
+                        >
+                          <Star className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteImage(image.id, image.image_url)}
+                        className="p-1.5 bg-background/90 rounded-full hover:bg-red-500 hover:text-white transition-colors"
+                        title="Delete image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Upload Button */}
+            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-gold/50 transition-colors">
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  {isUploading ? "Uploading..." : "Click to upload images"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 10MB</p>
+              </div>
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                disabled={isUploading}
+              />
+            </label>
           </div>
-        </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}

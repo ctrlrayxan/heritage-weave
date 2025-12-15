@@ -1,35 +1,95 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { OrnateDivider } from "@/components/ui/ornate-divider";
 import { EnquiryModal } from "@/components/ui/enquiry-modal";
-// Featured products will be loaded from the database
-// Empty array as placeholder - products will be uploaded by the owner
-const featuredProducts: Array<{
-  id: number;
-  name: string;
-  image: string;
+import { supabase } from "@/integrations/supabase/client";
+
+type FeaturedProduct = {
+  id: string;
+  title: string;
   sku: string;
   category: string;
-  description: string;
-  badge: string | null;
-}> = [];
+  description: string | null;
+  is_limited_edition: boolean | null;
+  is_one_of_a_kind: boolean | null;
+  hero_image?: string | null;
+};
 
 export function FeaturedCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<typeof featuredProducts[0] | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<FeaturedProduct | null>(null);
+  const [featuredProducts, setFeaturedProducts] = useState<FeaturedProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchFeaturedProducts();
+  }, []);
+
+  const fetchFeaturedProducts = async () => {
+    const { data: productsData, error } = await supabase
+      .from("products")
+      .select("id, title, sku, category, description, is_limited_edition, is_one_of_a_kind")
+      .eq("stock_status", "available")
+      .order("created_at", { ascending: false })
+      .limit(8);
+
+    if (error) {
+      console.error("Error fetching products:", error);
+      setFeaturedProducts([]);
+    } else {
+      // Fetch hero images for each product
+      const productsWithImages = await Promise.all(
+        (productsData || []).map(async (product) => {
+          const { data: imageData } = await supabase
+            .from("product_images")
+            .select("image_url")
+            .eq("product_id", product.id)
+            .eq("is_hero", true)
+            .maybeSingle();
+          
+          return {
+            ...product,
+            hero_image: imageData?.image_url || null,
+          };
+        })
+      );
+      setFeaturedProducts(productsWithImages);
+    }
+    setIsLoading(false);
+  };
 
   const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % featuredProducts.length);
+    if (featuredProducts.length > 0) {
+      setCurrentIndex((prev) => (prev + 1) % featuredProducts.length);
+    }
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length);
+    if (featuredProducts.length > 0) {
+      setCurrentIndex((prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length);
+    }
   };
 
-  const handleEnquiry = (product: typeof featuredProducts[0]) => {
+  const handleEnquiry = (product: FeaturedProduct) => {
     setSelectedProduct(product);
     setEnquiryOpen(true);
+  };
+
+  const getBadge = (product: FeaturedProduct) => {
+    if (product.is_limited_edition) return "Limited Edition";
+    if (product.is_one_of_a_kind) return "One-of-a-Kind";
+    return null;
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      jewellery: "Jewellery",
+      pashmina: "Pashminas",
+      pashtush: "Pashtush",
+      antiques: "Antiques",
+    };
+    return labels[category] || category;
   };
 
   return (
@@ -50,7 +110,11 @@ export function FeaturedCarousel() {
         </div>
 
         {/* Carousel */}
-        {featuredProducts.length > 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground font-body">Loading...</p>
+          </div>
+        ) : featuredProducts.length > 0 ? (
           <div className="relative max-w-6xl mx-auto">
             {/* Navigation buttons */}
             <button
@@ -70,56 +134,67 @@ export function FeaturedCarousel() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {featuredProducts.slice(currentIndex, currentIndex + 3).concat(
                 featuredProducts.slice(0, Math.max(0, currentIndex + 3 - featuredProducts.length))
-              ).slice(0, 3).map((product) => (
-                <div
-                  key={product.id}
-                  className="group bg-background card-heritage p-6 ornate-frame"
-                >
-                  {/* Product image */}
-                  <div className="aspect-square bg-muted mb-6 relative overflow-hidden img-zoom-container">
-                    <img 
-                      src={product.image} 
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-4 border border-gold/20 group-hover:border-gold/40 transition-colors duration-500" />
+              ).slice(0, 3).map((product) => {
+                const badge = getBadge(product);
+                return (
+                  <div
+                    key={product.id}
+                    className="group bg-background card-heritage p-6 ornate-frame"
+                  >
+                    {/* Product image */}
+                    <div className="aspect-square bg-muted mb-6 relative overflow-hidden img-zoom-container">
+                      {product.hero_image ? (
+                        <img 
+                          src={product.hero_image} 
+                          alt={product.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground font-body italic">
+                          <span>Product Image</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-4 border border-gold/20 group-hover:border-gold/40 transition-colors duration-500" />
+                    </div>
+
+                    {/* Badge */}
+                    {badge && (
+                      <span className={`inline-block mb-3 ${badge === "Limited Edition" ? "badge-limited" : "badge-exclusive"}`}>
+                        {badge}
+                      </span>
+                    )}
+
+                    {/* Content */}
+                    <p className="text-xs text-gold uppercase tracking-wider font-body mb-1">
+                      {getCategoryLabel(product.category)}
+                    </p>
+                    <h3 className="text-xl font-display font-semibold text-foreground mb-2">
+                      {product.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground font-body mb-1">
+                      SKU: {product.sku}
+                    </p>
+                    {product.description && (
+                      <p className="text-muted-foreground font-body mb-4 line-clamp-2">
+                        {product.description}
+                      </p>
+                    )}
+
+                    {/* Price on request badge */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-body text-gold italic">
+                        Price on Request
+                      </span>
+                      <button
+                        onClick={() => handleEnquiry(product)}
+                        className="text-sm font-body text-maroon hover:text-gold transition-colors underline underline-offset-4"
+                      >
+                        Enquire Now
+                      </button>
+                    </div>
                   </div>
-
-                  {/* Badge */}
-                  {product.badge && (
-                    <span className={`inline-block mb-3 ${product.badge === "Limited Edition" ? "badge-limited" : "badge-exclusive"}`}>
-                      {product.badge}
-                    </span>
-                  )}
-
-                  {/* Content */}
-                  <p className="text-xs text-gold uppercase tracking-wider font-body mb-1">
-                    {product.category}
-                  </p>
-                  <h3 className="text-xl font-display font-semibold text-foreground mb-2">
-                    {product.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground font-body mb-1">
-                    SKU: {product.sku}
-                  </p>
-                  <p className="text-muted-foreground font-body mb-4">
-                    {product.description}
-                  </p>
-
-                  {/* Price on request badge */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-body text-gold italic">
-                      Price on Request
-                    </span>
-                    <button
-                      onClick={() => handleEnquiry(product)}
-                      className="text-sm font-body text-maroon hover:text-gold transition-colors underline underline-offset-4"
-                    >
-                      Enquire Now
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Dots indicator */}
@@ -147,7 +222,7 @@ export function FeaturedCarousel() {
       <EnquiryModal
         open={enquiryOpen}
         onOpenChange={setEnquiryOpen}
-        productName={selectedProduct?.name}
+        productName={selectedProduct?.title}
         productSku={selectedProduct?.sku}
       />
     </section>
