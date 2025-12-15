@@ -54,19 +54,11 @@ export default function AdminProductEditPage() {
   });
 
   useEffect(() => {
-    checkAuth();
     if (!isNew) {
       fetchProduct();
       fetchProductImages();
     }
   }, [id]);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/admin/login");
-    }
-  };
 
   const fetchProduct = async () => {
     const { data, error } = await supabase

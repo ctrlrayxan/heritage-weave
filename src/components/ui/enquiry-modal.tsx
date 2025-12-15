@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { enquirySchema, type EnquiryFormData } from "@/lib/validations/enquiry";
 
 interface EnquiryModalProps {
   open: boolean;
@@ -16,7 +17,7 @@ interface EnquiryModalProps {
 }
 
 export function EnquiryModal({ open, onOpenChange, productName, productSku, productId }: EnquiryModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EnquiryFormData>({
     name: "",
     email: "",
     phone: "",
@@ -25,21 +26,50 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
     message: "",
     budgetRange: "",
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateForm = (): boolean => {
+    const result = enquirySchema.safeParse(formData);
+    
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        if (err.path[0]) {
+          fieldErrors[err.path[0] as string] = err.message;
+        }
+      });
+      setErrors(fieldErrors);
+      return false;
+    }
+    
+    setErrors({});
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast({
+        title: "Please fix the errors",
+        description: "Some fields have invalid values.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const { error } = await supabase.from("enquiries").insert([
         {
-          name: formData.name,
-          email: formData.email || null,
-          phone: formData.phone || null,
-          country: formData.country,
+          name: formData.name.trim(),
+          email: formData.email?.trim() || null,
+          phone: formData.phone?.trim() || null,
+          country: formData.country.trim(),
           preferred_contact: formData.contactMethod,
-          message: formData.message,
+          message: formData.message?.trim() || null,
           budget_range: formData.budgetRange || null,
           product_id: productId || null,
           product_title: productName || null,
@@ -63,10 +93,11 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
         message: "",
         budgetRange: "",
       });
+      setErrors({});
     } catch (error: any) {
       toast({
         title: "Error submitting enquiry",
-        description: error.message || "Please try again later.",
+        description: "Please try again later.",
         variant: "destructive",
       });
     } finally {
@@ -95,12 +126,13 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
               Your Name *
             </label>
             <Input
-              required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter your full name"
-              className="border-border focus:border-gold focus:ring-gold/30"
+              maxLength={100}
+              className={`border-border focus:border-gold focus:ring-gold/30 ${errors.name ? "border-red-500" : ""}`}
             />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
           <div>
@@ -112,8 +144,10 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder="your@email.com"
-              className="border-border focus:border-gold focus:ring-gold/30"
+              maxLength={255}
+              className={`border-border focus:border-gold focus:ring-gold/30 ${errors.email ? "border-red-500" : ""}`}
             />
+            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
           </div>
 
           <div>
@@ -124,8 +158,10 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="+91 98765 43210"
-              className="border-border focus:border-gold focus:ring-gold/30"
+              maxLength={30}
+              className={`border-border focus:border-gold focus:ring-gold/30 ${errors.phone ? "border-red-500" : ""}`}
             />
+            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -134,12 +170,13 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
                 Country *
               </label>
               <Input
-                required
                 value={formData.country}
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                 placeholder="Your country"
-                className="border-border focus:border-gold focus:ring-gold/30"
+                maxLength={100}
+                className={`border-border focus:border-gold focus:ring-gold/30 ${errors.country ? "border-red-500" : ""}`}
               />
+              {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
             </div>
 
             <div>
@@ -148,7 +185,7 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
               </label>
               <Select
                 value={formData.contactMethod}
-                onValueChange={(value) => setFormData({ ...formData, contactMethod: value })}
+                onValueChange={(value: "whatsapp" | "phone" | "email") => setFormData({ ...formData, contactMethod: value })}
               >
                 <SelectTrigger className="border-border focus:border-gold">
                   <SelectValue placeholder="Select method" />
@@ -171,8 +208,11 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               placeholder="Tell us more about what you're looking for..."
               rows={3}
-              className="border-border focus:border-gold focus:ring-gold/30"
+              maxLength={2000}
+              className={`border-border focus:border-gold focus:ring-gold/30 ${errors.message ? "border-red-500" : ""}`}
             />
+            {errors.message && <p className="text-red-500 text-xs mt-1">{errors.message}</p>}
+            <p className="text-xs text-muted-foreground mt-1">{formData.message?.length || 0}/2000</p>
           </div>
 
           <div>

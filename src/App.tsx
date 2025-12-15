@@ -14,6 +14,7 @@ import AdminProductsPage from "./pages/AdminProductsPage";
 import AdminProductEditPage from "./pages/AdminProductEditPage";
 import AdminEnquiriesPage from "./pages/AdminEnquiriesPage";
 import NotFound from "./pages/NotFound";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -30,10 +31,38 @@ const App = () => (
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/care" element={<CarePage />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/products" element={<AdminProductsPage />} />
-          <Route path="/admin/products/:id" element={<AdminProductEditPage />} />
-          <Route path="/admin/enquiries" element={<AdminEnquiriesPage />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminProductsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products/:id"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminProductEditPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/enquiries"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminEnquiriesPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
