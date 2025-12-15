@@ -14,7 +14,6 @@ import { toast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     products: 0,
     enquiries: 0,
@@ -22,32 +21,8 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    checkAuth();
     fetchStats();
   }, []);
-
-  const checkAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      navigate("/admin/login");
-      return;
-    }
-
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", session.user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (!roleData) {
-      await supabase.auth.signOut();
-      navigate("/admin/login");
-    }
-    
-    setIsLoading(false);
-  };
 
   const fetchStats = async () => {
     const [productsRes, enquiriesRes, newEnquiriesRes] = await Promise.all([
@@ -68,14 +43,6 @@ export default function AdminDashboard() {
     toast({ title: "Logged out successfully" });
     navigate("/admin/login");
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-gold">Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
