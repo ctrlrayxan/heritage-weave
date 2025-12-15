@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { enquirySchema, type EnquiryFormData } from "@/lib/validations/enquiry";
 
 interface EnquiryModalProps {
@@ -27,7 +26,6 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
     budgetRange: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validateForm = (): boolean => {
     const result = enquirySchema.safeParse(formData);
@@ -47,7 +45,24 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const sendWhatsAppEnquiry = () => {
+    const phone = "919884187864";
+    const productInfo = productName ? `${productName}${productSku ? ` (SKU: ${productSku})` : ''}` : 'your collection';
+    const customerInfo = [
+      `Name: ${formData.name}`,
+      formData.email ? `Email: ${formData.email}` : '',
+      formData.phone ? `Phone: ${formData.phone}` : '',
+      formData.country ? `Country: ${formData.country}` : '',
+      formData.budgetRange ? `Budget: ${formData.budgetRange}` : '',
+      formData.message ? `Message: ${formData.message}` : '',
+    ].filter(Boolean).join('\n');
+    
+    const message = `Hello, I am interested in ${productInfo} from New Indian Emporium.\n\n${customerInfo}`;
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -59,50 +74,24 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
       return;
     }
 
-    setIsSubmitting(true);
+    sendWhatsAppEnquiry();
+    
+    toast({
+      title: "Opening WhatsApp",
+      description: "Your enquiry details have been prepared. Complete your message on WhatsApp.",
+    });
 
-    try {
-      const { error } = await supabase.from("enquiries").insert([
-        {
-          name: formData.name.trim(),
-          email: formData.email?.trim() || null,
-          phone: formData.phone?.trim() || null,
-          country: formData.country.trim(),
-          preferred_contact: formData.contactMethod,
-          message: formData.message?.trim() || null,
-          budget_range: formData.budgetRange || null,
-          product_id: productId || null,
-          product_title: productName || null,
-        },
-      ]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Thank you for your enquiry!",
-        description: `Thanks, ${formData.name}. We received your enquiry${productName ? ` for ${productName}` : ""}. Expect a reply within 24 hours IST.`,
-      });
-
-      onOpenChange(false);
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        country: "",
-        contactMethod: "email",
-        message: "",
-        budgetRange: "",
-      });
-      setErrors({});
-    } catch (error: any) {
-      toast({
-        title: "Error submitting enquiry",
-        description: "Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    onOpenChange(false);
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      country: "",
+      contactMethod: "email",
+      message: "",
+      budgetRange: "",
+    });
+    setErrors({});
   };
 
   return (
@@ -238,10 +227,9 @@ export function EnquiryModal({ open, onOpenChange, productName, productSku, prod
 
           <Button
             type="submit"
-            disabled={isSubmitting}
             className="w-full btn-heritage"
           >
-            {isSubmitting ? "Sending..." : "Submit Enquiry"}
+            Enquire via WhatsApp
           </Button>
 
           <p className="text-xs text-center text-muted-foreground font-body">
